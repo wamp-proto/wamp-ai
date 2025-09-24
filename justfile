@@ -33,7 +33,6 @@ setup-files:
     #!/usr/bin/env bash
     set -e
 
-    cd {{workspace_path}}
     ln -sf ./AI_POLICY.md ../AI_POLICY.md
     ln -sf ./AI_GUIDELINES.md ../CLAUDE.md
     mkdir -p ../.gemini

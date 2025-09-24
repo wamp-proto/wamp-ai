@@ -43,3 +43,7 @@ Initialize or update a WAMP related repo including submodules:
 ```
 git submodule update --init --recursive
 ```
+
+```
+git submodule update --remote --merge
+```

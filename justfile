@@ -18,18 +18,16 @@ default:
     @just --list
     @echo ""
 
-# Setup AI policy Git hooks in current repository, should be run after adding submodule in target repository.
-setup-githooks:
+_setup-githooks:
     #!/usr/bin/env bash
     set -e
 
     # Configure Git to use the versioned hooks directory
-    git config core.hooksPath .githooks
-    echo "✔ Git hooks are now configured to use .githooks/"
+    cd .. && git config core.hooksPath .ai/.githooks
+    echo "✔ Git hooks are now configured to use .ai/.githooks"
     echo "  (run 'git config core.hooksPath' to verify)"
 
-# Setup AI policy & guideline files, should be run after adding submodule in target repository or in this repository for workspace level.
-setup-files:
+_setup-files:
     #!/usr/bin/env bash
     set -e
 
@@ -40,5 +38,10 @@ setup-files:
     mkdir -p ../.gemini
     ln -sf ../.ai/AI_GUIDELINES.md ../.gemini/GEMINI.md
 
-setup: (setup-githooks) (setup-files)
-    echo "✅ Repo or Workspace AI configuration complete"
+# Setup AI policy & guideline files and Git hooks in current repository, should be run after adding submodule in target repository.
+setup-repo: (_setup-githooks) (_setup-files)
+    echo "✅ Repo AI configuration complete"
+
+# Setup AI policy & guideline files in workspace, should be run from wamp-ai repository.
+setup-workspace: (_setup-files)
+    echo "✅ Workspace AI configuration complete"

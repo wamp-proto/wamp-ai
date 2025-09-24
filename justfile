@@ -38,7 +38,7 @@ setup-files:
     ln -sf .ai/AI_POLICY.md ../AI_POLICY.md
     ln -sf .ai/AI_GUIDELINES.md ../CLAUDE.md
     mkdir -p ../.gemini
-    ln -sf .ai/AI_GUIDELINES.md ../.gemini/GEMINI.md
+    ln -sf ../.ai/AI_GUIDELINES.md ../.gemini/GEMINI.md
 
 setup: (setup-githooks) (setup-files)
     echo "✅ Repo or Workspace AI configuration complete"

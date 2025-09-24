@@ -1,6 +1,7 @@
-# The Web Application Messaging Protocol: AI Support
+# The Web Application Messaging Protocol: AI Support Module
 
-Multi-repository workspace setup for AI assistants/agents specific configuration.
+Multi-repository workspace setup for AI assistants/agents specific configuration. This is intended to be added to WAMP target repositories
+as a Git submodule.
 
 *Single Source of Truth*
 - ✅ All AI config centralized in `wamp-ai` repo

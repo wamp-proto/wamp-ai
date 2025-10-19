@@ -14,6 +14,19 @@ git config core.hooksPath .githooks
 
 This tells Git to run hooks from `.githooks/` instead of `.git/hooks/`.
 
+## Available Hooks
+
+### `commit-msg`
+Enforces `AI_POLICY.md` by rejecting commits with AI authorship attribution.
+- Blocks: "Co-Authored-By: Claude", "Generated with Claude Code", etc.
+- Ensures: Human developer is sole author, even when AI assisted
+
+### `pre-push`
+Prevents AI assistants from pushing Git tags (creation or deletion).
+- Blocks: Pushing any refs under `refs/tags/*`
+- Ensures: Tags are only created by humans on dev PC
+- Rationale: Tags represent releases requiring human judgment
+
 ## Adding a New Hook
 
 1. Add the script in this directory, using the standard Git hook name (e.g. `pre-commit`, `commit-msg`).

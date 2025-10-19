@@ -223,6 +223,90 @@ Further, we aim for fully automated CI/CD (_not yet reality
 everywhere unfortunately_) using
 [GitHub Actions](https://docs.github.com/en/actions).
 
+### 2.5 Multi-Stage Git Workflow (Security Architecture)
+
+This project uses a secure multi-stage Git workflow that isolates AI assistant access from GitHub credentials:
+
+**Architecture:**
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌─────────────┐
+│  asgard1    │      │  Bare Repo   │      │  Dev PC     │      │  GitHub     │
+│  (AI work)  │─────▶│  (sync hub)  │◀─────│  (human)    │─────▶│  (public)   │
+└─────────────┘      └──────────────┘      └─────────────┘      └─────────────┘
+     push                  pull/push              push           origin/upstream
+```
+
+**Stage 1: AI Assistant Working Repository (asgard1)**
+- Location: `/home/oberstet/work/wamp/<project>/`
+- AI assistants work here with full read/write access
+- Push commits to bare repository
+- **NEVER** has GitHub credentials
+- **NEVER** creates or deletes Git tags
+- **NEVER** pushes directly to GitHub
+- Protected by `.ai/.githooks/commit-msg` to enforce `AI_POLICY.md`
+
+**Stage 2: Bare Repository (sync hub)**
+- Location: `/scm/repos/oberstet/wamp/<project>.git`
+- Central synchronization point
+- No working tree, only Git objects
+- AI pushes to this, human pulls from this
+- Isolated from external networks
+
+**Stage 3: Human Developer PC**
+- Developer's local machine
+- Pulls from bare repo (remote: `asgard1`)
+- Reviews all AI-assisted commits
+- **ONLY** location where tags are created/deleted
+- **ONLY** location with GitHub credentials
+- Uses HSK (Hardware Security Key - Nitrokey 3A) for GitHub authentication
+- Pushes to GitHub remotes:
+  - `origin`: Personal fork (e.g., `oberstet/autobahn-python`)
+  - `upstream`: Main project repo (e.g., `crossbario/autobahn-python`)
+
+**Stage 4: GitHub**
+- Public repositories
+- Receives pushed commits and tags from developer PC only
+- Triggers CI/CD via GitHub Actions
+- Hosts releases, documentation (Read the Docs)
+
+**Security Benefits:**
+
+1. **Credential Isolation**: GitHub credentials never touch asgard1
+2. **Human Gate**: All commits reviewed before reaching GitHub
+3. **Tag Control**: Only human can create/delete tags (for releases)
+4. **Policy Enforcement**: Git hooks enforce `AI_POLICY.md` at commit time
+5. **Audit Trail**: Clear separation between AI work and human approval
+
+**AI Assistant Responsibilities:**
+
+- ✅ Create commits following `AI_POLICY.md`
+- ✅ Push commits to bare repository
+- ✅ Read/write code in working repository
+- ❌ **NEVER** create or delete Git tags
+- ❌ **NEVER** push to GitHub (no access)
+- ❌ **NEVER** modify `.ai/` submodule content
+- ❌ **NEVER** bypass git hooks
+
+**Example Remote Configuration (Dev PC):**
+
+```bash
+$ git remote -v
+asgard1   ssh://user@asgard1/scm/repos/oberstet/wamp/<project>.git (fetch/push)
+origin    git@github.com:oberstet/<project>.git (fetch/push)
+upstream  git@github.com:crossbario/<project>.git (fetch/push)
+```
+
+**Shared Configuration via Git Submodule:**
+
+The `.ai/` directory is a Git submodule from `wamp-ai` repository containing:
+- `AI_GUIDELINES.md` (symlinked as `CLAUDE.md` in project root)
+- `AI_POLICY.md` (for human contributors)
+- `.githooks/commit-msg` (enforces AI authorship policy)
+- `.githooks/pre-push` (prevents tag pushing by AI)
+
+This ensures consistent AI policies across all projects in the WAMP ecosystem.
+
 ### 3. Code Style and Standards
 
 - Use [Black](https://black.readthedocs.io/) for Python code

@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# Git pre-push hook to enforce AI_POLICY.md
+# Prevents AI assistants from pushing tags (tags should only be created by humans)
+#
+
+# This hook is called with the following parameters:
+#
+# $1 -- Name of the remote to which the push is being done
+# $2 -- URL to which the push is being done
+#
+# If pushing without setting a remote, the remote name will be provided as "(no remote)"
+# and the URL will be provided as "(no URL)".
+
+remote="$1"
+url="$2"
+
+# Read the list of refs being pushed from stdin
+# Format: <local ref> <local oid> <remote ref> <remote oid>
+while read local_ref local_oid remote_ref remote_oid
+do
+    # Check if we're pushing a tag (refs/tags/*)
+    if echo "$remote_ref" | grep -q "^refs/tags/"; then
+        tag_name=$(echo "$remote_ref" | sed 's|^refs/tags/||')
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "ERROR: Push rejected - AI assistants must NOT create or push tags"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "You attempted to push tag: $tag_name"
+        echo ""
+        echo "Per AI_POLICY.md and the project's security architecture:"
+        echo "  • AI assistants work on asgard1 (working repository)"
+        echo "  • Tags are ONLY created on the human developer's PC"
+        echo "  • Tags represent releases and require human judgment"
+        echo ""
+        echo "This is enforced to maintain:"
+        echo "  1. Human control over release versioning"
+        echo "  2. Clear separation of AI work vs. human approval"
+        echo "  3. Security in the multi-stage Git workflow"
+        echo ""
+        echo "If you are a human developer and seeing this message:"
+        echo "  • You may be on the wrong machine (should be on dev PC, not asgard1)"
+        echo "  • Contact the maintainer if this is incorrect"
+        echo ""
+        exit 1
+    fi
+
+    # Check if we're deleting a tag (remote_oid is all zeros)
+    if echo "$remote_ref" | grep -q "^refs/tags/" && [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+        tag_name=$(echo "$remote_ref" | sed 's|^refs/tags/||')
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "ERROR: Push rejected - AI assistants must NOT delete tags"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "You attempted to delete tag: $tag_name"
+        echo ""
+        echo "Tag deletion requires human judgment and should only be done"
+        echo "from the human developer's PC, never from asgard1."
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0

@@ -75,3 +75,41 @@ setup-repo: (_setup-repo-githooks) (_setup-repo-files)
 # Setup AI policy & guideline files in workspace (should be run from root dir in `wamp-ai` repository).
 setup-workspace: (_setup-workspace-files)
     echo "✅ Workspace AI configuration complete"
+
+# Generate audit file in target repository from template (should be run from `.ai` dir in target repository).
+generate-audit-file:
+    #!/usr/bin/env bash
+    set -e
+
+    # Get current date, branch, and repo name
+    CURRENT_DATE=$(date +%Y-%m-%d)
+    CURRENT_BRANCH=$(git -C .. symbolic-ref --short HEAD 2>/dev/null || echo "unknown")
+    REPO_NAME=$(basename "$(git -C .. rev-parse --show-toplevel)" 2>/dev/null || echo "unknown")
+
+    # Create .audit directory if it doesn't exist
+    mkdir -p ../.audit
+
+    # Target audit file
+    AUDIT_FILE="../.audit/WORK.md"
+
+    # Check if audit file already exists
+    if [ -f "$AUDIT_FILE" ]; then
+        echo "⚠️  Audit file already exists: $AUDIT_FILE"
+        echo "   Please edit it manually or remove it first."
+        exit 1
+    fi
+
+    # Copy template to target location
+    cp templates/AUDIT.md "$AUDIT_FILE"
+
+    echo "✅ Audit file created: $AUDIT_FILE"
+    echo ""
+    echo "📋 Next steps:"
+    echo "   1. Edit $AUDIT_FILE to document your AI-assisted work"
+    echo "   2. Fill in the audit entry fields (AI Assistant, Scope, Files, Testing, Review)"
+    echo "   3. Commit the audit file with your changes"
+    echo ""
+    echo "Current context:"
+    echo "   Repository: $REPO_NAME"
+    echo "   Branch: $CURRENT_BRANCH"
+    echo "   Date: $CURRENT_DATE"

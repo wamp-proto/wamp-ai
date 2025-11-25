@@ -104,17 +104,6 @@ generate-audit-file:
         GITHUB_USER=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     fi
 
-    # Get repository URL for AI_POLICY.md link
-    if [[ "$ORIGIN_URL" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
-        # Dev PC case: extract from GitHub URL
-        REPO_URL="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
-    elif [[ "$ORIGIN_URL" =~ /scm/repos/([^/]+)/wamp/([^/.]+)\.git ]]; then
-        # asgard1 case: extract from bare repo path and construct fork URL
-        REPO_URL="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
-    else
-        REPO_URL="https://github.com/OWNER/REPO"
-    fi
-
     # Get current date (UTC)
     CURRENT_DATE=$(date -u +%Y-%m-%d)
 
@@ -135,7 +124,7 @@ generate-audit-file:
     cat > "$AUDIT_FILE" << 'AUDIT_EOF'
     - [ ] I did **not** use any AI-assistance tools to help create this pull request.
     - [x] I **did** use AI-assistance tools to *help* create this pull request.
-    - [x] I have read, understood and followed the projects' [AI Policy](REPO_URL_PLACEHOLDER/blob/main/AI_POLICY.md) when creating code, documentation etc. for this pull request.
+    - [x] I have read, understood and followed the project's AI_POLICY.md when creating code, documentation etc. for this pull request.
 
     Submitted by: @GITHUB_USER_PLACEHOLDER
     Date: CURRENT_DATE_PLACEHOLDER
@@ -144,7 +133,6 @@ generate-audit-file:
     AUDIT_EOF
 
     # Now replace placeholders (avoiding leading dashes which just interprets)
-    sed -i "s|REPO_URL_PLACEHOLDER|${REPO_URL}|g" "$AUDIT_FILE"
     sed -i "s|GITHUB_USER_PLACEHOLDER|${GITHUB_USER}|g" "$AUDIT_FILE"
     sed -i "s|CURRENT_DATE_PLACEHOLDER|${CURRENT_DATE}|g" "$AUDIT_FILE"
     sed -i "s|BRANCH_PLACEHOLDER|${BRANCH}|g" "$AUDIT_FILE"

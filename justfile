@@ -81,16 +81,39 @@ generate-audit-file:
     #!/usr/bin/env bash
     set -e
 
-    # Get current date, branch, and repo name
-    CURRENT_DATE=$(date +%Y-%m-%d)
-    CURRENT_BRANCH=$(git -C .. symbolic-ref --short HEAD 2>/dev/null || echo "unknown")
-    REPO_NAME=$(basename "$(git -C .. rev-parse --show-toplevel)" 2>/dev/null || echo "unknown")
+    # Change to parent directory (target repository)
+    cd ..
+
+    # Get current branch name
+    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "unknown")
+
+    # Sanitize branch name: replace / with -, remove dots, replace special chars with _
+    SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/\//-/g' | sed 's/\.//g' | sed 's/[^a-zA-Z0-9_-]/_/g')
+
+    # Get GitHub username from origin remote URL
+    ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ "$ORIGIN_URL" =~ github\.com[:/]([^/]+)/ ]]; then
+        GITHUB_USER="${BASH_REMATCH[1]}"
+    else
+        # Fallback to git config user.name if can't extract from URL
+        GITHUB_USER=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+    fi
+
+    # Get repository URL for AI_POLICY.md link
+    if [[ "$ORIGIN_URL" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
+        REPO_URL="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    else
+        REPO_URL="https://github.com/OWNER/REPO"
+    fi
+
+    # Get current date (UTC)
+    CURRENT_DATE=$(date -u +%Y-%m-%d)
 
     # Create .audit directory if it doesn't exist
-    mkdir -p ../.audit
+    mkdir -p .audit
 
     # Target audit file
-    AUDIT_FILE="../.audit/WORK.md"
+    AUDIT_FILE=".audit/${GITHUB_USER}_${SANITIZED_BRANCH}.md"
 
     # Check if audit file already exists
     if [ -f "$AUDIT_FILE" ]; then
@@ -99,17 +122,49 @@ generate-audit-file:
         exit 1
     fi
 
-    # Copy template to target location
-    cp templates/AUDIT.md "$AUDIT_FILE"
+    # Render template using Python and Jinja2
+    python3 << 'PYTHON_SCRIPT'
+import os
+import sys
+from pathlib import Path
+
+try:
+    from jinja2 import Template
+except ImportError:
+    print("Error: jinja2 not installed. Installing...")
+    import subprocess
+    subprocess.run([sys.executable, "-m", "pip", "install", "jinja2"], check=True)
+    from jinja2 import Template
+
+# Read template
+template_path = Path(".ai/audit/templates/audit-file.md.j2")
+template_content = template_path.read_text()
+
+# Get variables from environment
+context = {
+    'user': os.environ['GITHUB_USER'],
+    'branch': os.environ['BRANCH'],
+    'date': os.environ['CURRENT_DATE'],
+    'repo_url': os.environ['REPO_URL'],
+}
+
+# Render template
+template = Template(template_content)
+output = template.render(context)
+
+# Write to audit file
+audit_file = Path(os.environ['AUDIT_FILE'])
+audit_file.write_text(output)
+PYTHON_SCRIPT
 
     echo "✅ Audit file created: $AUDIT_FILE"
     echo ""
     echo "📋 Next steps:"
-    echo "   1. Edit $AUDIT_FILE to document your AI-assisted work"
-    echo "   2. Fill in the audit entry fields (AI Assistant, Scope, Files, Testing, Review)"
-    echo "   3. Commit the audit file with your changes"
+    echo "   1. Edit $AUDIT_FILE and update 'Related issue(s)' with actual issue numbers"
+    echo "   2. Adjust AI assistance checkboxes if needed"
+    echo "   3. Commit the audit file with your PR changes"
     echo ""
     echo "Current context:"
-    echo "   Repository: $REPO_NAME"
-    echo "   Branch: $CURRENT_BRANCH"
+    echo "   GitHub User: $GITHUB_USER"
+    echo "   Branch: $BRANCH (sanitized: $SANITIZED_BRANCH)"
     echo "   Date: $CURRENT_DATE"

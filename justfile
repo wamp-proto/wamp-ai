@@ -90,17 +90,26 @@ generate-audit-file:
     # Sanitize branch name: replace / with -, remove dots, replace special chars with _
     SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/\//-/g' | sed 's/\.//g' | sed 's/[^a-zA-Z0-9_-]/_/g')
 
-    # Get GitHub username from origin remote URL
+    # Get GitHub username from git remotes
     ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
+
+    # Try to extract from GitHub URL (dev PC case)
     if [[ "$ORIGIN_URL" =~ github\.com[:/]([^/]+)/ ]]; then
         GITHUB_USER="${BASH_REMATCH[1]}"
+    # Try to extract from bare repo path (asgard1 case: /scm/repos/USERNAME/...)
+    elif [[ "$ORIGIN_URL" =~ /scm/repos/([^/]+)/ ]]; then
+        GITHUB_USER="${BASH_REMATCH[1]}"
+    # Fallback to git config
     else
-        # Fallback to git config user.name if can't extract from URL
         GITHUB_USER=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
     fi
 
     # Get repository URL for AI_POLICY.md link
     if [[ "$ORIGIN_URL" =~ github\.com[:/]([^/]+)/([^/.]+) ]]; then
+        # Dev PC case: extract from GitHub URL
+        REPO_URL="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    elif [[ "$ORIGIN_URL" =~ /scm/repos/([^/]+)/wamp/([^/.]+)\.git ]]; then
+        # asgard1 case: extract from bare repo path and construct fork URL
         REPO_URL="https://github.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
     else
         REPO_URL="https://github.com/OWNER/REPO"
@@ -122,40 +131,25 @@ generate-audit-file:
         exit 1
     fi
 
-    # Render template using Python and Jinja2
-    python3 << 'PYTHON_SCRIPT'
-import os
-import sys
-from pathlib import Path
+    # Generate audit file from template
+    cat > "$AUDIT_FILE" << 'AUDIT_EOF'
+    - [ ] I did **not** use any AI-assistance tools to help create this pull request.
+    - [x] I **did** use AI-assistance tools to *help* create this pull request.
+    - [x] I have read, understood and followed the projects' [AI Policy](REPO_URL_PLACEHOLDER/blob/main/AI_POLICY.md) when creating code, documentation etc. for this pull request.
 
-try:
-    from jinja2 import Template
-except ImportError:
-    print("Error: jinja2 not installed. Installing...")
-    import subprocess
-    subprocess.run([sys.executable, "-m", "pip", "install", "jinja2"], check=True)
-    from jinja2 import Template
+    Submitted by: @GITHUB_USER_PLACEHOLDER
+    Date: CURRENT_DATE_PLACEHOLDER
+    Related issue(s): #XXX
+    Branch: GITHUB_USER_PLACEHOLDER:BRANCH_PLACEHOLDER
+    AUDIT_EOF
 
-# Read template
-template_path = Path(".ai/audit/templates/audit-file.md.j2")
-template_content = template_path.read_text()
-
-# Get variables from environment
-context = {
-    'user': os.environ['GITHUB_USER'],
-    'branch': os.environ['BRANCH'],
-    'date': os.environ['CURRENT_DATE'],
-    'repo_url': os.environ['REPO_URL'],
-}
-
-# Render template
-template = Template(template_content)
-output = template.render(context)
-
-# Write to audit file
-audit_file = Path(os.environ['AUDIT_FILE'])
-audit_file.write_text(output)
-PYTHON_SCRIPT
+    # Now replace placeholders (avoiding leading dashes which just interprets)
+    sed -i "s|REPO_URL_PLACEHOLDER|${REPO_URL}|g" "$AUDIT_FILE"
+    sed -i "s|GITHUB_USER_PLACEHOLDER|${GITHUB_USER}|g" "$AUDIT_FILE"
+    sed -i "s|CURRENT_DATE_PLACEHOLDER|${CURRENT_DATE}|g" "$AUDIT_FILE"
+    sed -i "s|BRANCH_PLACEHOLDER|${BRANCH}|g" "$AUDIT_FILE"
+    # Remove leading indentation
+    sed -i 's/^    //' "$AUDIT_FILE"
 
     echo "✅ Audit file created: $AUDIT_FILE"
     echo ""

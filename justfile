@@ -51,9 +51,10 @@ _setup-repo-files:
     set -e
 
     # the target path you specify is interpreted relative to the directory where
-    # the symlink will be created (the link name’s location)
+    # the symlink will be created (the link name's location)
     ln -sf .ai/AI_POLICY.md ../AI_POLICY.md
     ln -sf .ai/AI_GUIDELINES.md ../CLAUDE.md
+    ln -sf .ai/OVERVIEW.md ../OVERVIEW.md
     mkdir -p ../.gemini
     ln -sf ../.ai/AI_GUIDELINES.md ../.gemini/GEMINI.md
 

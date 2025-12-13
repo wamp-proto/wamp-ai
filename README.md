@@ -1,26 +1,35 @@
 # The Web Application Messaging Protocol: AI Support Module
 
-Multi-repository workspace setup for AI assistants/agents specific configuration. This is intended to be added to WAMP target repositories
-as a Git submodule.
+Multi-repository workspace setup for AI assistants/agents specific configuration. This is intended to be added to WAMP target (using) repositories as a Git submodule.
 
-*Single Source of Truth*
-- ✅ All AI config centralized in `wamp-ai` repo
-- ✅ Versioned and evolvable over time
-- ✅ Consistent across all WAMP projects
+See also: [CI/CD Support Module](https://github.com/wamp-proto/wamp-cicd)
 
-*Multi-AI Support*
-- ✅ Claude (`CLAUDE.md`)
-- ✅ Gemini (`.gemini/GEMINI.md`)
-- ✅ Extensible for future AI assistants
+## Benefits of Centralized wamp-ai and wamp-cicd
 
-*Dual-Level Coverage*
-- ✅ Project-level: Each repo gets AI instructions
-- ✅ Workspace-level: Working from ~/work/wamp/` also covered
+1. Single Source of Truth - Update once in `wamp-cicd` or `wamp-ai`, versioned and evolvable over time, propagate everywhere via git submodule update
+2. Consistency - Issue templates, PR templates, CI actions, and scripts behave identically across projects
+3. Reduced Maintenance - Bug fixes in shared scripts benefit all projects
+4. Onboarding - New contributors see the same patterns everywhere
+5. Standard Git Mechanisms - Git submodules (standard practice), Symlinks (filesystem-level solution), Automated setup via justfile
+6. Dual-Level Coverage - Project-level (single using repo) and Workspace-level (multi-repo)
+7. AI Policy Enforcement - Centralized `AI_GUIDELINES.md` ensures consistent AI assistant behavior
+8. Multi-AI Support - Claude (`CLAUDE.md`), Gemini (`.gemini/GEMINI.md`), extensible for future AI assistants
 
-*Standard Git Mechanisms*
-- ✅ Git submodules (standard practice)
-- ✅ Symlinks (filesystem-level solution)
-- ✅ Automated setup via justfile
+The Architecture - *reused repos*, and *using repos*:
+
+```
+wamp-proto/wamp-ai          wamp-proto/wamp-cicd
+       │                            │
+       │ .ai submodule              │ .cicd submodule
+       ▼                            ▼
+┌──────────────────────────────────────────────┐
+│  crossbario/zlmdb                            │
+│  crossbario/autobahn-python                  │
+│  crossbario/crossbar                         │
+│  crossbario/txaio                            │
+│  (future: cfxdb, autobahn-js, etc.)          │
+└──────────────────────────────────────────────┘
+```
 
 ## Usage
 

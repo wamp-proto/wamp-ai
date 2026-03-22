@@ -39,7 +39,7 @@ Add this repo as a submodule to a WAMP related repo:
 cd ~/work/wamp/txaio
 git submodule add https://github.com/wamp-proto/wamp-ai.git .ai
 cd .ai
-just setup
+just setup-repo
 ```
 
 Clone a WAMP related repo including submodules:

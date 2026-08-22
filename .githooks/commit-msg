@@ -2,8 +2,27 @@
 #
 # Git commit-msg hook to enforce AI_POLICY.md
 # Prevents commits with AI co-authorship which violates our policy
-# Prevents AI commits directly to master/main branches
+# Keeps ordinary commits off master/main, while admitting the one commit that
+# belongs there: a maintainer's signed merge.
 #
+# THIS IS A HINT, NOT A CONTROL, AND THE DISTINCTION IS DELIBERATE.
+#
+# A hook runs under the same account as the work it is checking. An assistant
+# with a local account can unset `core.hooksPath`, and the estate's threat model
+# assumes such an account can eventually reach root on its host. So nothing here
+# stops an adversary; it stops accident and drift, which is most of what goes
+# wrong most of the time and is worth stopping.
+#
+# What is NOT a hint is the signature on the resulting object: keyless signing
+# binds an OIDC identity gated by a hardware authenticator that is never
+# attached to a host an assistant runs on. That is verified in `pre-push` (#20)
+# and by `gitsign verify` naming the expected identity AND issuer - not here,
+# because commit-msg runs BEFORE the commit object exists and there is nothing
+# yet to verify.
+#
+# So this hook asks the strongest question available at this moment - "is this
+# the KIND of commit that is allowed here" - and leaves "is it really signed by
+# the right person" to the step that can answer it.
 
 commit_msg_file="$1"
 commit_msg=$(cat "$commit_msg_file")
@@ -11,38 +30,88 @@ commit_msg=$(cat "$commit_msg_file")
 # Get current branch name
 current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
 
-# Get repository name to check if this is wamp-ai or wamp-cicd (infrastructure repos)
-repo_name=$(basename "$(git rev-parse --show-toplevel)" 2>/dev/null || echo "unknown")
-
-# Check if committing directly to master/main (AI assistants should use feature branches)
-# EXCEPTION: wamp-ai and wamp-cicd infrastructure repos can commit to main/master
+# ORDINARY COMMITS DO NOT BELONG ON THE INTEGRATION BRANCH; A SIGNED MERGE DOES.
+#
+# This used to refuse EVERY commit on main or master, excepting two repositories
+# named as string literals (`wamp-ai`, `wamp-cicd`). Two problems with that, and
+# the second is why it had to change:
+#
+#   A list of repository names is a check whose model is a literal. It is silent
+#   about every repository nobody thought to add, and it says nothing about WHY
+#   those two were special.
+#
+#   It refused the one act the merge policy requires. Since
+#   wamp-cicd/MERGE-AND-SIGNING-POLICY.md (2026-08-22), an approved pull request
+#   is merged LOCALLY and signed by the maintainer, because a merge made on the
+#   forge carries the forge's key and cannot be attributed to a person. This
+#   hook fires on `git merge`, so it blocked that in every repository carrying
+#   `.ai` - and the remedy it printed was to switch hooks off, which switches
+#   off the AI-attribution checks below at the same time, for as long as anyone
+#   forgets step three. One clone in this estate was found running with
+#   `core.hooksPath = /dev/null` for months, from exactly that procedure.
+#
+# So the discriminator is now a property of the COMMIT, not of the repository:
+#
+#   a merge is in progress            $GIT_DIR/MERGE_HEAD exists
+#   and this repository can sign      gpg.format = x509, gpg.x509.program = gitsign
+#
+# WHAT THIS DOES NOT PROVE, stated so nobody mistakes it for proof: that the
+# resulting merge IS signed, or signed by the right identity. commit-msg runs
+# before the object exists. A merge made without `-S` in a repository where
+# `commit.gpgsign` is unset passes here and is caught at `pre-push` (#20), where
+# the commit exists and `gitsign verify` can name the expected identity and
+# issuer. Requiring `commit.gpgsign` here instead was considered and rejected:
+# `just land` signs with an explicit `-S`, so demanding the config would refuse
+# correct work - and a guard that refuses correct work is the guard that gets
+# disabled (#16).
 if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
-    if [ "$repo_name" != "wamp-ai" ] && [ "$repo_name" != "wamp-cicd" ]; then
+    git_dir=$(git rev-parse --git-dir 2>/dev/null || echo ".git")
+
+    merge_in_progress=false
+    [ -f "$git_dir/MERGE_HEAD" ] && merge_in_progress=true
+
+    signing_configured=false
+    if [ "$(git config --get gpg.format 2>/dev/null)" = "x509" ]; then
+        case "$(git config --get gpg.x509.program 2>/dev/null)" in
+            *gitsign*) signing_configured=true ;;
+        esac
+    fi
+
+    if [ "$merge_in_progress" = true ] && [ "$signing_configured" = true ]; then
+        : # a maintainer's signed merge - this is what the branch is for
+    else
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "ERROR: Commit rejected - AI assistants must NOT commit to $current_branch"
+        echo "ERROR: Commit rejected - this is not a signed merge, and"
+        echo "       $current_branch takes nothing else"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
-        echo "Per AI_POLICY.md and project workflow:"
-        echo "  • AI assistants should work on feature branches, not master/main"
-        echo "  • Use descriptive branch names (e.g., fix-issue-123, add-feature-xyz)"
-        echo "  • This enforces the branch-per-feature GitHub Flow workflow"
+        if [ "$merge_in_progress" != true ]; then
+            echo "  This is an ordinary commit. Work happens on a branch:"
+            echo ""
+            echo "    just new-branch <issue-number>     (or: git checkout -b fix_<n>)"
+            echo "    git commit -m \"...\""
+            echo "    just publish"
+            echo ""
+            echo "  Then open a pull request, and land it with 'just land',"
+            echo "  which makes the merge here and signs it."
+        else
+            echo "  A merge is in progress, but this repository cannot sign it:"
+            echo ""
+            echo "    git config gpg.format x509"
+            echo "    git config gpg.x509.program gitsign"
+            echo "    git config workflow.signingIdentity <your-certificate-identity>"
+            echo ""
+            echo "  gitsign is configured PER REPOSITORY. Without it the merge"
+            echo "  would carry no signature anyone can check, which is the"
+            echo "  object the policy exists to keep off this branch."
+        fi
         echo ""
-        echo "To fix this:"
-        echo "  1) Create a feature branch:"
-        echo "     git checkout -b feature-branch-name"
+        echo "  See MERGE-AND-SIGNING-POLICY.md in wamp-cicd."
         echo ""
-        echo "  2) Commit your changes:"
-        echo "     git commit -m \"your commit message\""
-        echo ""
-        echo "  3) Push to bare repo:"
-        echo "     git push origin feature-branch-name"
-        echo ""
-        echo "If you are a HUMAN developer who needs to commit to $current_branch:"
-        echo "  • Follow these steps to temporarily disable hooks:"
-        echo ""
-        echo "    1) git config core.hooksPath /dev/null"
-        echo "    2) git commit -m \"your message\""
-        echo "    3) git config core.hooksPath .ai/.githooks"
+        echo "  Do NOT disable hooks to get past this. That also switches off"
+        echo "  the AI-attribution checks, and re-enabling them is a step people"
+        echo "  forget - one clone in this estate ran unguarded for months that"
+        echo "  way. If this refusal is wrong, the hook is wrong: open an issue."
         echo ""
         exit 1
     fi

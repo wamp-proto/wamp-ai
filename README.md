@@ -31,6 +31,19 @@ wamp-proto/wamp-ai          wamp-proto/wamp-cicd
 └──────────────────────────────────────────────┘
 ```
 
+### What this repository itself uses
+
+`wamp-ai` and `wamp-cicd` are the two _tooling sources_: every other repository pins them as the
+submodules `.ai/` and `.cicd/`. For exactly that reason they carry **no submodules themselves** -
+a submodule inside them would be cloned by every recursive checkout of every repository that
+pins them. What `wamp-ai` needs from `wamp-cicd` (the branch workflow, the shared community files
+and their drift check) it gets as a plain checkout at a pinned commit: the pin in a tracked
+`deps.toml`, the checkout in the gitignored `.deps/`.
+
+[TOOLING-STRUCTURE.md](TOOLING-STRUCTURE.md) has the whole picture: the structure side by side
+for an ordinary repository and a tooling source, the reasons, and how to work with it. It is the
+same document as in `wamp-cicd`.
+
 ## Usage
 
 Add this repo as a submodule to a WAMP related repo:

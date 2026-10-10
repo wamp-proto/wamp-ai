@@ -71,6 +71,15 @@ git submodule update --init --recursive
 git submodule update --remote --merge
 ```
 
+## Aspects
+
+wamp-ai provides the `way-a` aspect ([`aspects/way-a/`](aspects/way-a/SKILL.md)): the contract for how a
+repository is worked on. Rule 1 - the tooling pins - is implemented: every repository pins wamp-ai and
+wamp-cicd at exactly the commits this repository desires (its own commit, and the wamp-cicd commit its
+`deps.toml` pins), as submodules or as `deps.toml` entries depending on its layout
+([TOOLING-STRUCTURE.md](TOOLING-STRUCTURE.md)). `just check-aspect` (wamp-cicd) runs the check from a
+repository's own pin; `just test` runs this repository's tests of it.
+
 ## AI Verification & Judgement
 
 Here is Claude Code's assessment:

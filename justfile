@@ -12,6 +12,15 @@ set script-interpreter := ['uv', 'run', '--script']
 # Project base directory = directory of this justfile
 PROJECT_DIR := justfile_directory()
 
+# -----------------------------------------------------------------------------
+# -- Way-A shared workflow recipes (wamp-cicd workflow.just)
+# -----------------------------------------------------------------------------
+# wamp-ai is a tooling source and carries no submodules (TOOLING-STRUCTURE.md):
+# wamp-cicd is a plain checkout under .deps/ (deps.toml, scripts/deps.sh), hence
+# the optional import - `just deps` first in a fresh clone. The default branch is
+# `main`, workflow.just's default, so WORKFLOW_MAIN is not overridden.
+import? '.deps/wamp-cicd/workflow.just'
+
 # List all recipes.
 default:
     @echo ""
@@ -19,6 +28,14 @@ default:
     @echo ""
     @just --list
     @echo ""
+
+# Make .deps/ what deps.toml says (after a clone, after a pull).
+deps *args:
+    bash scripts/deps.sh sync {{args}}
+
+# Internal guard: `.deps/` must match deps.toml.
+_deps-ok:
+    @bash scripts/deps.sh check >/dev/null || { echo "ERROR: .deps/ does not match deps.toml - run: just deps" >&2; exit 1; }
 
 # Add AI submodule from `wamp-ai` to dir `.ai` in target repository (should be run from root dir in target repository).
 add-repo-submodule:

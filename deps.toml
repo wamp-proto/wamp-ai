@@ -1,0 +1,6 @@
+# Dependencies as plain checkouts at pinned commits in .deps/ (gitignored) - not submodules.
+# `just deps` makes .deps/ match this file. See TOOLING-STRUCTURE.md.
+
+[wamp-cicd]
+url    = "https://github.com/wamp-proto/wamp-cicd.git"
+commit = "4c2f9ac397eb960d21969b00a2ffbd8685db87c6"

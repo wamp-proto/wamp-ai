@@ -1,23 +1,24 @@
 # Tooling structure
 
 How the WAMP repositories get their shared tooling, and why the two repositories that _are_ the
-shared tooling get it differently.
+shared tooling - and the aspect repositories, which others pin too - get it differently.
 
 This document is the same file in
 [wamp-proto/wamp-cicd](https://github.com/wamp-proto/wamp-cicd) and
 [wamp-proto/wamp-ai](https://github.com/wamp-proto/wamp-ai).
 
-## Three kinds of repository
+## Four kinds of repository
 
 | kind | which | what it is |
 |---|---|---|
 | **tooling source** | wamp-ai, wamp-cicd | the shared tooling itself: the AI policy and its commit hooks (wamp-ai); the branch workflow, the community files, the CI building blocks and the fleet tools (wamp-cicd) |
+| **aspect repository** | crossbario/autobahn-crossbar-ai, ... | provides aspects - `aspects/<name>/`, each an Agent Skill with deterministic check and reconcile scripts - that the repositories using them pin as a submodule; pinned by others, so laid out like a tooling source |
 | **fleet definition** | wamp-fleet, autobahn-crossbar-fleet, ... | which repositories belong to a fleet, in which cohorts, and the rollouts applied to them |
 | **ordinary repository** | everything else: wamp-proto, autobahn-python, crossbar, ... | uses the tooling, belongs to one fleet |
 
 ## The structure
 
-|  | ordinary repository | tooling source (wamp-ai, wamp-cicd) |
+|  | ordinary repository | tooling source (wamp-ai, wamp-cicd), aspect repository |
 |---|---|---|
 | wamp-ai | submodule `.ai/` | `.deps/wamp-ai/` (not in wamp-ai itself) |
 | wamp-cicd | submodule `.cicd/` | `.deps/wamp-cicd/` (not in wamp-cicd itself) |
@@ -28,7 +29,7 @@ This document is the same file in
 | community files, drift check, lag check, branch workflow, commit hooks | yes | yes: the same checks, reading from `.deps/...` |
 
 An ordinary repository has three submodules. A tooling source has the same three dependencies,
-minus itself, as plain checkouts at pinned commits. A fleet definition is an ordinary repository
+minus itself, as plain checkouts at pinned commits. An aspect repository is laid out the same way. A fleet definition is an ordinary repository
 in this respect: it has `.ai/` and `.cicd/` as submodules (and no `.fleet/`: it cannot contain
 itself).
 
@@ -51,7 +52,8 @@ would be pinned by both:
 ```
 
 Each level pins a strictly older commit, so it ends, but it gets one level deeper with every
-bump, in every repository. The rule that prevents it:
+bump, in every repository. The same holds for an aspect repository: every repository that uses one
+of its aspects pins it as a submodule. The rule that prevents it:
 
 > A repository that others pin as a submodule carries no submodules itself.
 
@@ -95,7 +97,7 @@ decided by `core.hooksPath`, which is local git configuration: not committed, no
 clone. `just where` reports whether they are enforced, and `just new-branch` refuses to start
 work in a clone where they are not.
 
-## Working in a tooling source
+## Working in a tooling source or an aspect repository
 
 ```bash
 just deps                                   # make .deps/ what deps.toml says (after clone, after a pull)
@@ -105,7 +107,7 @@ just where                                  # reports hooks, signing, the branch
 Switching the hooks on, once per clone:
 
 ```bash
-git config core.hooksPath .deps/wamp-ai/.githooks      # in wamp-cicd
+git config core.hooksPath .deps/wamp-ai/.githooks      # in wamp-cicd, and in an aspect repository
 git config core.hooksPath .githooks                    # in wamp-ai (its own hooks)
 ```
 
@@ -126,13 +128,13 @@ dependency.
 
 ## Where things are, by layout
 
-| what | ordinary repository | wamp-cicd | wamp-ai |
-|---|---|---|---|
-| commit hooks (`core.hooksPath`) | `.ai/.githooks` | `.deps/wamp-ai/.githooks` | `.githooks` |
-| branch workflow (`just where`, `new-branch`, `publish`, `land`) | `import '.cicd/workflow.just'` | `import 'workflow.just'` | `import? '.deps/wamp-cicd/workflow.just'` |
-| community file templates | `.cicd/templates/` | `templates/` | `.deps/wamp-cicd/templates/` |
-| fleet definition | `.fleet/` | `.deps/<definition repository>/` | `.deps/<definition repository>/` |
-| lag check in CI | `lag-check.sh` | `lag-check.sh --fleet-dir .deps/<definition repository>` | the same |
+| what | ordinary repository | wamp-cicd | wamp-ai | aspect repository |
+|---|---|---|---|---|
+| commit hooks (`core.hooksPath`) | `.ai/.githooks` | `.deps/wamp-ai/.githooks` | `.githooks` | `.deps/wamp-ai/.githooks` |
+| branch workflow (`just where`, `new-branch`, `publish`, `land`) | `import '.cicd/workflow.just'` | `import 'workflow.just'` | `import? '.deps/wamp-cicd/workflow.just'` | `import? '.deps/wamp-cicd/workflow.just'` |
+| community file templates | `.cicd/templates/` | `templates/` | `.deps/wamp-cicd/templates/` | `.deps/wamp-cicd/templates/` |
+| fleet definition | `.fleet/` | `.deps/<definition repository>/` | `.deps/<definition repository>/` | - |
+| lag check in CI | `lag-check.sh` | `lag-check.sh --fleet-dir .deps/<definition repository>` | the same | - |
 
 The tools find out which layout they are in by looking: `.ai/` present, else wamp-ai pinned in
 `deps.toml`, else the repository's own `.githooks/`. Nothing has to be configured.

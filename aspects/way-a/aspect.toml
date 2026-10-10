@@ -1,0 +1,19 @@
+# The way-a aspect: how a repository is worked on. Machine-readable spine; see SKILL.md.
+
+name        = "way-a"
+description = "How a repository is worked on: tooling pins, branch workflow, hooks, AI policy, community files, audit, CI."
+provider    = "wamp-ai"
+requires    = []
+
+# Rule 1 (implemented): the tooling pins.
+[rule.tooling_pins]
+# Where the desired commits come from - the wamp-ai checkout the aspect runs from:
+#   wamp-ai   -> that checkout's commit (the aspect's provider revision)
+#   wamp-cicd -> the commit that checkout's deps.toml pins
+# ordinary repository: submodules .ai and .cicd; pinned repository: deps.toml entries.
+layouts  = ["submodule", "deps"]
+ops      = ["submodule_pin", "deps_pin"]
+severity = "fail"
+
+# Rules to come (wamp-proto/wamp-ai#31): the CI step running `just check-aspect`,
+# community files, hooks, the audit-file workflow, one-line just recipe descriptions.

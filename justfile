@@ -29,6 +29,10 @@ default:
     @just --list
     @echo ""
 
+# Run the tests of the aspects this repository provides (standard library only, Python 3.11+).
+test:
+    python3 -m unittest discover -s tests -v
+
 # Make .deps/ what deps.toml says (after a clone, after a pull).
 deps *args:
     bash scripts/deps.sh sync {{args}}

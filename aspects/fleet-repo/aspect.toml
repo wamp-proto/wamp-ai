@@ -1,0 +1,18 @@
+# The fleet-repo aspect: what a fleet repository looks like. Machine-readable spine; see SKILL.md.
+
+name        = "fleet-repo"
+description = "What a fleet repository looks like: well-formed rollout records that carry what their status promises, and an index consistent with them."
+provider    = "wamp-ai"
+requires    = []
+
+# Rule 1 (implemented): the rollout records, rollouts/<id>/rollout.toml. CHECK ONLY -
+# the records are evidence, written once by the rollout engine.
+[rule.rollout_records]
+ops      = []
+severity = "fail"
+
+# Rule 2 (implemented): the index, rollouts/README.md, consistent with the records.
+# CHECK ONLY - the renderer belongs to the rollout engine; this does not re-render.
+[rule.rollout_index]
+ops      = []
+severity = "fail"

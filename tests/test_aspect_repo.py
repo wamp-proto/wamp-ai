@@ -340,7 +340,7 @@ class ThisRepository(unittest.TestCase):
         wamp_ai = Path(__file__).resolve().parents[1]
         findings = _ar.inspect(wamp_ai)
         self.assertEqual([f for f in findings if f.status != _ar.OK], [])
-        self.assertEqual({f.message.split(":")[0] for f in findings}, {"way-a", "aspect-repo"})
+        self.assertEqual({f.message.split(":")[0] for f in findings}, {"way-a", "aspect-repo", "fleet-repo"})
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+# The aspect-repo aspect: what an aspect repository looks like. Machine-readable spine; see SKILL.md.
+
+name        = "aspect-repo"
+description = "What an aspect repository looks like: aspects/<name>/ with SKILL.md, aspect.toml and a deterministic, stdlib-only interface."
+provider    = "wamp-ai"
+requires    = []
+
+# Rule 1 (implemented): the aspect folder contract. CHECK ONLY - no ops; reconcile.py
+# returns an empty ChangeSet. Checks, per aspects/<name>/: SKILL.md frontmatter and
+# name; aspect.toml name and provider; requires resolve; the interface present,
+# standard library only, network-free and deterministic; no machine-local paths.
+# No aspect folder at all is a WARN.
+[rule.aspect_folder]
+ops      = []
+severity = "fail"

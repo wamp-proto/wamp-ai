@@ -3,4 +3,4 @@
 
 [wamp-cicd]
 url    = "https://github.com/wamp-proto/wamp-cicd.git"
-commit = "e40ae1e3452d521840bfd5fe7a1341d620dcc60c"
+commit = "027f339995bd139f9550cb4e45a68b02c84bf786"

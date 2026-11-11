@@ -42,9 +42,19 @@ try:
     _gha = _load("_gha", "_gha.py")
     latest = _load("gh_actions_latest", "latest.py")
     inspect_repo = _load("gh_actions_check", "check.py").inspect_repo
-    reconcile_repo = _load("gh_actions_reconcile", "reconcile.py").reconcile_repo
+    _reconcile_repo = _load("gh_actions_reconcile", "reconcile.py").reconcile_repo
 finally:
     sys.path.remove(str(SCRIPTS))
+
+
+def reconcile_repo(repo: Path) -> dict:
+    """The reconcile, and what every test asks of it: gh-actions asks no questions
+    (wamp-proto/wamp-ai#46). The fleet manager reads ``decisions_required`` as
+    question records and writes an OPEN-*.toml for each; this aspect has none."""
+    r = _reconcile_repo(repo)
+    if r["decisions_required"] != []:
+        raise AssertionError(f"decisions_required must be [], got {r['decisions_required']!r}")
+    return r
 
 TABLE = _gha.load_table()
 CO = TABLE["actions/checkout"]
@@ -348,7 +358,7 @@ class Decisions(Repo):
         self.assertIn(("open-decisions", "FAIL"), statuses(self.repo))
         r = reconcile_repo(self.repo)
         self.assertEqual(r["changeset"], [])
-        self.assertEqual(r["decisions_required"], [".decisions/gh-actions/OPEN-20261111-gh_actions_deviation.toml"])
+        self.assertEqual(r["decisions_required"], [])
 
 
 class ThisRepository(unittest.TestCase):

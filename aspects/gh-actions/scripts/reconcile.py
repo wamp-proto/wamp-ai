@@ -17,7 +17,12 @@ reads a repository and **emits a ChangeSet as JSON**; it changes nothing. One op
 No op for what a human must look at: an action not in the pin table, a malformed or
 ``docker://`` value, a workflow in a subdirectory, a broken or stale decision. Those
 are the check's findings. While a ``.decisions/gh-actions/OPEN-*.toml`` exists, the
-ChangeSet is empty and ``decisions_required`` lists it.
+ChangeSet is empty, and the check fails on it (rule 3).
+
+``decisions_required`` is always ``[]``: gh-actions asks no questions. A bump is decided
+in the pin table, and a member that stays behind writes its ``gh_actions_deviation``
+decision itself. (The fleet manager reads that key as question records and writes an
+``OPEN-*.toml`` for each, wamp-proto/wamp-ai#46.)
 
 Output is canonical and deterministic (ops sorted by path and line, no timestamps), so
 the same inputs give the same JSON and ``digest``.
@@ -69,7 +74,7 @@ def reconcile_repo(repo: Path) -> dict:
     return {
         "applicable": bool(files),
         "changeset": changes,
-        "decisions_required": pending,
+        "decisions_required": [],
         "digest": _digest(changes),
     }
 
@@ -86,8 +91,6 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     for name, r in results.items():
         print(f"\n{name}: {len(r['changeset'])} change(s) [{r['digest'][:12]}]")
-        for path in r["decisions_required"]:
-            print(f"  waiting for a decision: {path}")
         for c in r["changeset"]:
             print(f"  {c['path']}:{c['line']}: {c['new'].strip()}")
     return 0

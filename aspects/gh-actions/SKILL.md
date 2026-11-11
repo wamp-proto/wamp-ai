@@ -91,7 +91,8 @@ sha256 = "<sha256 of the table entries of the kept actions>"
   JSON of `{"actions.toml#<action>": {"sha", "version"}}`, sorted). When the table moves
   one of them, the decision is stale: the check fails until it is decided again.
 - `.decisions/gh-actions/OPEN-*.toml` is a question nobody has answered yet: the check
-  fails and the reconcile waits (rule 3).
+  fails and the reconcile waits (rule 3). The aspect itself never asks one: its reconcile
+  always returns `decisions_required = []`.
 
 ## Scripts
 

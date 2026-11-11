@@ -1,0 +1,27 @@
+# The gh-actions aspect: which commit of each third-party GitHub Action the workflows
+# run. Machine-readable spine; see SKILL.md.
+
+name        = "gh-actions"
+description = "Every third-party GitHub Action a repository's workflows use is pinned to the commit the pin table says, with its version as a comment."
+provider    = "wamp-ai"
+requires    = []
+
+# Rule 1 (implemented): the pins. Every third-party `uses:` in .github/workflows/*.yml
+# and .github/actions/*/action.yml reads `<action>@<sha> # <version>` as in
+# references/actions.toml, or as a current deviation decision keeps it.
+[rule.pins]
+table    = "references/actions.toml"
+ops      = ["line_replace"]
+severity = "fail"
+
+# Rule 2 (implemented): a member that stays behind on an action records a signed
+# decision, .decisions/gh-actions/<YYYYMMDD>-gh_actions_deviation[-N].toml, bound to
+# the table entries it deviates from. A stale or malformed one fails.
+[rule.decisions]
+decision = "gh_actions_deviation"
+severity = "fail"
+
+# Rule 3 (implemented): no .decisions/gh-actions/OPEN-*.toml (A18; never lands).
+[rule.open_decisions]
+none     = true
+severity = "fail"

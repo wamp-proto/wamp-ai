@@ -1,0 +1,67 @@
+###############################################################################
+#
+#  Copyright (C) typedef int GmbH
+#  SPDX-License-Identifier: MIT
+#
+###############################################################################
+#
+# The gh-actions aspect's "latest" report (wamp-proto/wamp-ai#44): once a week,
+# compare the pin table (aspects/gh-actions/references/actions.toml) with each
+# action's newest release, write the result to the job summary, and keep one
+# tracking issue open while the table is behind. Replaces Dependabot's
+# github-actions ecosystem: a bump is a reviewed commit to the table here, and a
+# rollout brings it to the members.
+
+name: gh-actions latest
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"  # Mondays, 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write  # the one tracking issue, nothing else
+
+concurrency:
+  group: gh-actions-latest
+  cancel-in-progress: false
+
+env:
+  TITLE: "gh-actions: the pin table is behind the newest releases"
+
+jobs:
+  latest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the pin table with the newest releases
+        id: latest
+        run: |
+          rc=0
+          python3 aspects/gh-actions/scripts/latest.py --exit-code > latest.md || rc=$?
+          cat latest.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -eq 1 ]; then
+            echo "::error::latest.py could not read a tag list"
+            exit 1
+          fi
+          echo "behind=$([ "$rc" -eq 2 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the tracking issue
+        if: steps.latest.outputs.behind == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          same_title='map(select(.title == env.TITLE)) | .[0].number // empty'
+          number=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title --jq "$same_title")
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file latest.md
+            echo "updated #$number" >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh issue create --title "$TITLE" --body-file latest.md
+          fi

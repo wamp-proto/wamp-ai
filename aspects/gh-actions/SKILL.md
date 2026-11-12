@@ -28,7 +28,7 @@ In a member, every third-party `uses:` line must read exactly
 
 | what | where | how it is handled |
 |---|---|---|
-| third-party action, in the table | `.github/workflows/*.yml`, `.github/actions/*/action.yml` | pinned: `line_replace` of that line |
+| third-party action, in the table | `.github/workflows/*.yml`, `.github/actions/*/action.yml`, `actions/*/action.yml` (composite actions at the root, as in wamp-cicd; not a submodule's copy such as `.cicd/actions/`) | pinned: `line_replace` of that line |
 | third-party action, not in the table | same | FAIL, no op: add it to the table first |
 | action in a subdirectory of its repo (`github/codeql-action/init`) | same | the entry of its repository |
 | reusable workflow of another owner (`owner/repo/.github/workflows/x.yml@ref`) | same | pinned like an action |

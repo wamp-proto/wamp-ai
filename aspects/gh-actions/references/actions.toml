@@ -70,6 +70,12 @@ version = "v4.0.0"
 sha     = "33d7b85da1a04171e211befe2c739303b9a4c066"
 version = "v4.39.3"
 
+# Added 2026-11-12 (wamp-proto/wamp-ai#48): wamp-proto and wamp-site-gen deploy with it;
+# the newest release of v4, the major they ran.
+[action."JamesIves/github-pages-deploy-action"]
+sha     = "fa24774553152dd7873cd16ebd8d959b010c5445"
+version = "v4.9.0"
+
 [action."nick-fields/retry"]
 sha     = "ce71cc2ab81d554ebbe88c79ab5975992d79ba08"
 version = "v3.0.2"

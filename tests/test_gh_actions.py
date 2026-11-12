@@ -145,6 +145,11 @@ class Table(unittest.TestCase):
         self.assertGreaterEqual(TABLE["astral-sh/setup-uv"].major, 7)
         self.assertGreaterEqual(TABLE["extractions/setup-just"].major, 4)
 
+    def test_the_pages_deploy_action_is_in_the_table(self) -> None:
+        # wamp-proto and wamp-site-gen deploy with it (wamp-proto/wamp-ai#48).
+        pin = TABLE["JamesIves/github-pages-deploy-action"]
+        self.assertEqual((pin.sha, pin.version), ("fa24774553152dd7873cd16ebd8d959b010c5445", "v4.9.0"))
+
     def test_a_malformed_table_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             bad = Path(d) / "actions.toml"
@@ -232,6 +237,19 @@ class Check(Repo):
         self.assertEqual(len(fails(self.repo)), 1)
         ops = reconcile_repo(self.repo)["changeset"]
         self.assertEqual([op["path"] for op in ops], [".github/actions/setup/action.yml"])
+
+    def test_root_composite_actions_are_checked(self) -> None:
+        # wamp-cicd keeps its composite actions in actions/<name>/ at the repository root.
+        self.write("actions/verify/action.yaml", "runs:\n  steps:\n    - uses: actions/upload-artifact@v4\n")
+        self.assertEqual(len(fails(self.repo)), 1)
+        ops = reconcile_repo(self.repo)["changeset"]
+        self.assertEqual([op["path"] for op in ops], ["actions/verify/action.yaml"])
+
+    def test_a_submodule_copy_of_composite_actions_is_not_read(self) -> None:
+        # A member's .cicd/ is wamp-cicd itself; its actions are checked there, not here.
+        self.write(".cicd/actions/verify/action.yml", "runs:\n  steps:\n    - uses: actions/upload-artifact@v4\n")
+        self.assertEqual(fails(self.repo), [])
+        self.assertEqual(reconcile_repo(self.repo)["changeset"], [])
 
     def test_yaml_extension_is_read(self) -> None:
         self.write(".github/workflows/w.yaml", "steps:\n  - uses: actions/checkout@v4\n")

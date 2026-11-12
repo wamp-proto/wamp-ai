@@ -172,12 +172,14 @@ def workflow_files(repo: Path) -> tuple[list[Path], list[Path]]:
         for p in sorted(wf.rglob("*")):
             if p.is_file() and p.suffix in (".yml", ".yaml"):
                 (files if p.parent == wf else dead).append(p)
-    actions = gh / "actions"
-    if actions.is_dir():
-        for d in sorted(actions.iterdir()):
-            for fname in ("action.yml", "action.yaml"):
-                if (d / fname).is_file():
-                    files.append(d / fname)
+    # Composite actions: .github/actions/<name>/ and, as in wamp-cicd, actions/<name>/ at the
+    # root. A submodule's copy (.cicd/actions/ in a member) is its own repository's business.
+    for actions in (gh / "actions", repo / "actions"):
+        if actions.is_dir():
+            for d in sorted(actions.iterdir()):
+                for fname in ("action.yml", "action.yaml"):
+                    if (d / fname).is_file():
+                        files.append(d / fname)
     return files, dead
 
 
